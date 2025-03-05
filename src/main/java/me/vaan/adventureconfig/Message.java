@@ -15,18 +15,22 @@ public class Message {
     private static final Duration TICK = Duration.ofMillis(50);
     private final String keyPrefix;
     private final Component beforeMessage;
+    private final Config config;
 
-    public Message() {
+    public Message(Config config) {
+        this.config = config;
         this.keyPrefix = "";
         this.beforeMessage = Component.empty();
     }
 
-    public Message(String keyPrefix) {
+    public Message(Config config, String keyPrefix) {
+        this.config = config;
         this.keyPrefix = keyPrefix + ".";
         this.beforeMessage = Component.empty();
     }
 
-    public Message(String keyPrefix, Component beforeMessage) {
+    public Message(Config config, String keyPrefix, Component beforeMessage) {
+        this.config = config;
         this.keyPrefix = keyPrefix + ".";
         this.beforeMessage = beforeMessage;
     }
@@ -38,8 +42,7 @@ public class Message {
      * @param key Combined with the prefix key to obtain data from Config
      */
     public void sendMessage(Audience audience, String key) {
-        Config cs = Config.getInstance();
-        audience.sendMessage(beforeMessage.append(cs.getComponent(keyPrefix + key)));
+        audience.sendMessage(beforeMessage.append(config.getComponent(keyPrefix + key)));
     }
 
     /**
@@ -53,8 +56,6 @@ public class Message {
      * @param arg List of arguments to process on the tag
      */
     public void sendMessage(Audience audience, String key, String... arg) {
-        Config cs = Config.getInstance();
-
         TagResolver[] resolvers = new TagResolver[arg.length + 1];
         resolvers[arg.length] = TagResolver.standard();
         for (int i = 0; i < arg.length; i++) {
@@ -64,7 +65,7 @@ public class Message {
         TagResolver total = TagResolver.resolver(resolvers);
         MiniMessage mm = MiniMessage.builder().tags(total).build();
 
-        Component componentMessage = mm.deserialize(cs.getString(keyPrefix + key));
+        Component componentMessage = mm.deserialize(config.getString(keyPrefix + key));
         audience.sendMessage(beforeMessage.append(componentMessage));
     }
 
@@ -80,11 +81,10 @@ public class Message {
      * @param key Combined with the prefix key to obtain data from Config
      */
     public void sendTitle(Audience audience, String key) {
-        Config cs = Config.getInstance();
         MiniMessage mm = MiniMessage.miniMessage();
 
         List<Component> cmp = new ArrayList<>();
-        for (String line : cs.getSList(keyPrefix + key)) {
+        for (String line : config.getSList(keyPrefix + key)) {
             cmp.add(mm.deserialize(line));
         }
 
@@ -92,9 +92,9 @@ public class Message {
             return;
         }
 
-        int fadeIn = cs.getInt("titles.fade_in");
-        int stayDuration = cs.getInt("titles.stay_duration");
-        int fadeOut = cs.getInt("titles.fade_out");
+        int fadeIn = config.getInt("titles.fade_in");
+        int stayDuration = config.getInt("titles.stay_duration");
+        int fadeOut = config.getInt("titles.fade_out");
 
         Title.Times times = Title.Times.times(TICK.multipliedBy(fadeIn), TICK.multipliedBy(stayDuration), TICK.multipliedBy(fadeOut));
         Title title;

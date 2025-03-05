@@ -12,23 +12,13 @@ import java.util.List;
 import java.util.Map;
 
 public class Config {
-
-    private static Config instance = null;
-    public static Config getInstance() {
-        return instance;
-    }
-
     private final File file;
 
     private final Map<String, Object> configMap = new HashMap<>();
     private final Map<String, Component> componentMap = new HashMap<>();
     private static final MiniMessage mm = MiniMessage.miniMessage();
 
-    public static void init(File file) {
-        instance = new Config(file);
-    }
-
-    private Config(File config) {
+    public Config(File config) {
         this.file = config;
         try (FileInputStream fis = new FileInputStream(config)) {
             Yaml yaml = new Yaml();
