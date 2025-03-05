@@ -25,13 +25,13 @@ public class Message {
         Config cs = Config.getInstance();
         Component prefix = cs.getComponent("messages.prefix");
 
-        TagResolver[] array = new TagResolver[arg.length + 1];
-        array[arg.length] = TagResolver.standard();
+        TagResolver[] resolvers = new TagResolver[arg.length + 1];
+        resolvers[arg.length] = TagResolver.standard();
         for (int i = 0; i < arg.length; i++) {
-            TagResolver targetResolver = TagResolver.resolver("arg" + i, Tag.selfClosingInserting(Component.text(arg[i])));
+            resolvers[i] = TagResolver.resolver("arg" + i, Tag.selfClosingInserting(Component.text(arg[i])));
         }
 
-        TagResolver total = TagResolver.resolver(array);
+        TagResolver total = TagResolver.resolver(resolvers);
         MiniMessage mm = MiniMessage.builder().tags(total).build();
 
         Component componentMessage = mm.deserialize(cs.getString("messages." + key));
