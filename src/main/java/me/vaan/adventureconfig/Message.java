@@ -1,5 +1,6 @@
 package me.vaan.adventureconfig;
 
+import lombok.Getter;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -10,7 +11,9 @@ import net.kyori.adventure.title.Title;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+@Getter
 public class Message {
     private static final Duration TICK = Duration.ofMillis(50);
     private final String keyPrefix;
@@ -35,6 +38,36 @@ public class Message {
         this.beforeMessage = beforeMessage;
     }
 
+    public Component getRaw(String key) {
+        return config.getComponent(keyPrefix + key);
+    }
+
+    public Component getRaw(String key, String... arg) {
+        TagResolver[] resolvers = new TagResolver[arg.length + 1];
+        resolvers[arg.length] = TagResolver.standard();
+        for (int i = 0; i < arg.length; i++) {
+            resolvers[i] = TagResolver.resolver("arg" + i, Tag.selfClosingInserting(Component.text(arg[i])));
+        }
+
+        TagResolver total = TagResolver.resolver(resolvers);
+        MiniMessage mm = MiniMessage.builder().tags(total).build();
+
+        return mm.deserialize(config.getString(keyPrefix + key));
+    }
+
+    public Component getRaw(String key, Map<String, Component> mapper) {
+        ArrayList<TagResolver> resolvers = new ArrayList<>(mapper.size() + 1);
+        resolvers.add(TagResolver.standard());
+        for (Map.Entry<String, Component> entry : mapper.entrySet()) {
+            resolvers.add( TagResolver.resolver(entry.getKey(), Tag.selfClosingInserting(entry.getValue())) );
+        }
+
+        TagResolver total = TagResolver.resolver(resolvers);
+        MiniMessage mm = MiniMessage.builder().tags(total).build();
+
+        return mm.deserialize(config.getString(keyPrefix + key));
+    }
+
     /**
      * Send a simple message to the user without any arguments to process.
      *
@@ -56,16 +89,13 @@ public class Message {
      * @param arg List of arguments to process on the tag
      */
     public void sendMessage(Audience audience, String key, String... arg) {
-        TagResolver[] resolvers = new TagResolver[arg.length + 1];
-        resolvers[arg.length] = TagResolver.standard();
-        for (int i = 0; i < arg.length; i++) {
-            resolvers[i] = TagResolver.resolver("arg" + i, Tag.selfClosingInserting(Component.text(arg[i])));
-        }
+        Component componentMessage = getRaw(key, arg);
+        audience.sendMessage(beforeMessage.append(componentMessage));
+    }
 
-        TagResolver total = TagResolver.resolver(resolvers);
-        MiniMessage mm = MiniMessage.builder().tags(total).build();
 
-        Component componentMessage = mm.deserialize(config.getString(keyPrefix + key));
+    public void sendMessage(Audience audience, String key, Map<String, Component> mapper) {
+        Component componentMessage = getRaw(key, mapper);
         audience.sendMessage(beforeMessage.append(componentMessage));
     }
 
