@@ -10,6 +10,7 @@ import net.kyori.adventure.title.Title;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -38,11 +39,51 @@ public class Message {
         this.beforeMessage = beforeMessage;
     }
 
-    public Component getRaw(String key) {
-        return config.getComponent(keyPrefix + key);
+    public List<Component> getRaw(String key, MiniMessage mm) {
+        String finalKey = keyPrefix + key;
+        Object message = config.get(finalKey);
+        if (message == null) {
+            throw new RuntimeException("Key not found: " + finalKey);
+        }
+
+        if (message instanceof String) {
+            String messageString = (String) message;
+            List<Component> result = new ArrayList<>(1);
+            result.add(beforeMessage.append(
+                    mm.deserialize(messageString)
+            ));
+            return result;
+        } else if (message instanceof List<?>) {
+            List<?> messages = (List<?>) message;
+
+            if (messages.isEmpty()) {
+                throw new RuntimeException("Key format not valid for message: " + finalKey);
+            }
+
+            if (!(messages.get(0) instanceof String)) {
+                throw new RuntimeException("Key format not valid for message: " + finalKey);
+            }
+
+            List<String> messageList = (List<String>) messages;
+            List<Component> allMessage = new LinkedList<>();
+            for (String entry : messageList) {
+                allMessage.add(
+                        beforeMessage.append(
+                                mm.deserialize(entry)
+                        )
+                );
+            }
+            return allMessage;
+        }
+
+        throw new RuntimeException("Key format not valid for message: " + finalKey);
     }
 
-    public Component getRaw(String key, String... arg) {
+    public List<Component> getRaw(String key) {
+        return getRaw(key, MiniMessage.miniMessage());
+    }
+
+    public List<Component> getRaw(String key, String... arg) {
         TagResolver[] resolvers = new TagResolver[arg.length + 1];
         resolvers[arg.length] = TagResolver.standard();
         for (int i = 0; i < arg.length; i++) {
@@ -52,10 +93,10 @@ public class Message {
         TagResolver total = TagResolver.resolver(resolvers);
         MiniMessage mm = MiniMessage.builder().tags(total).build();
 
-        return mm.deserialize(config.getString(keyPrefix + key));
+        return getRaw(key, mm);
     }
 
-    public Component getRaw(String key, Map<String, Component> mapper) {
+    public List<Component> getRaw(String key, Map<String, Component> mapper) {
         ArrayList<TagResolver> resolvers = new ArrayList<>(mapper.size() + 1);
         resolvers.add(TagResolver.standard());
         for (Map.Entry<String, Component> entry : mapper.entrySet()) {
@@ -65,7 +106,7 @@ public class Message {
         TagResolver total = TagResolver.resolver(resolvers);
         MiniMessage mm = MiniMessage.builder().tags(total).build();
 
-        return mm.deserialize(config.getString(keyPrefix + key));
+        return getRaw(key, mm);
     }
 
     /**
@@ -75,7 +116,8 @@ public class Message {
      * @param key Combined with the prefix key to obtain data from Config
      */
     public void sendMessage(Audience audience, String key) {
-        audience.sendMessage(beforeMessage.append(config.getComponent(keyPrefix + key)));
+        List<Component> componentMessage = getRaw(key);
+        componentMessage.stream().map(beforeMessage::append).forEach(audience::sendMessage);
     }
 
     /**
@@ -89,14 +131,14 @@ public class Message {
      * @param arg List of arguments to process on the tag
      */
     public void sendMessage(Audience audience, String key, String... arg) {
-        Component componentMessage = getRaw(key, arg);
-        audience.sendMessage(beforeMessage.append(componentMessage));
+        List<Component> componentMessage = getRaw(key, arg);
+        componentMessage.stream().map(beforeMessage::append).forEach(audience::sendMessage);
     }
 
 
     public void sendMessage(Audience audience, String key, Map<String, Component> mapper) {
-        Component componentMessage = getRaw(key, mapper);
-        audience.sendMessage(beforeMessage.append(componentMessage));
+        List<Component> componentMessage = getRaw(key, mapper);
+        componentMessage.stream().map(beforeMessage::append).forEach(audience::sendMessage);
     }
 
     /**
