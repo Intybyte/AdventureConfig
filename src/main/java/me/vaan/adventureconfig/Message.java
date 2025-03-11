@@ -117,7 +117,7 @@ public class Message {
      */
     public void sendMessage(Audience audience, String key) {
         List<Component> componentMessage = getRaw(key);
-        componentMessage.stream().map(beforeMessage::append).forEach(audience::sendMessage);
+        componentMessage.forEach(audience::sendMessage);
     }
 
     /**
@@ -132,13 +132,13 @@ public class Message {
      */
     public void sendMessage(Audience audience, String key, String... arg) {
         List<Component> componentMessage = getRaw(key, arg);
-        componentMessage.stream().map(beforeMessage::append).forEach(audience::sendMessage);
+        componentMessage.forEach(audience::sendMessage);
     }
 
 
     public void sendMessage(Audience audience, String key, Map<String, Component> mapper) {
         List<Component> componentMessage = getRaw(key, mapper);
-        componentMessage.stream().map(beforeMessage::append).forEach(audience::sendMessage);
+        componentMessage.forEach(audience::sendMessage);
     }
 
     /**
